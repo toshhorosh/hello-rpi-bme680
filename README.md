@@ -26,3 +26,6 @@ And now we have received the file ` target/arm-unknown-linux-gnueabihf/debug/hel
 
 ## Docker run
 [WIP]
+
+## Display sensor data
+[WIP]
