@@ -1,5 +1,3 @@
-#![no_std]
-
 use bme680::*;
 use core::result;
 use core::time::Duration;
@@ -8,16 +6,26 @@ use embedded_hal::blocking::i2c;
 use linux_embedded_hal as hal;
 use linux_embedded_hal::Delay;
 use log::info;
+use std::env;
 
 fn main(
 ) -> result::Result<(), Error<<hal::I2cdev as i2c::Read>::Error, <hal::I2cdev as i2c::Write>::Error>>
 {
     env_logger::init();
+    let _primary = String::from("76");
+    let _secondary = String::from("77");
+
+    let i2c_address = match env::var("BME_I2C_ADDRESS") {
+        x if x == Ok(_primary) => I2CAddress::Primary,
+        x if x == Ok(_secondary) => I2CAddress::Secondary,
+        Ok(_) => panic!("Unknown i2c address was received!"),
+        Err(e) => panic!("Set env value 'BME_I2C_ADDRESS' before run the program! Error: {}", e)
+    };
 
     let i2c = hal::I2cdev::new("/dev/i2c-1").unwrap();
     let mut delayer = Delay {};
 
-    let mut dev = Bme680::init(i2c, &mut delayer, I2CAddress::Secondary)?;
+    let mut dev = Bme680::init(i2c, &mut delayer, i2c_address)?;
     let mut delay = Delay {};
 
     let settings = SettingsBuilder::new()

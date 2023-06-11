@@ -3,9 +3,15 @@ Simple Rust application for home atmosphere monitoring system based on Rpi Zero,
 
 ## Local run on rpi 
 The main idea of getting data from sensor is taken from examples in [the repo of bme680 crate](https://github.com/marcelbuesing/bme680).
-And if you can build the code directly on Raspberry Pi, compile and build it with cargo and run in console:
 
-` sudo RUST_LOG=info target/debug/hello-rpi-bme680 `
+Before running the code you should determine i2c address of sensor connected to rpi with command:
+
+`sudo i2cdetect -y 1`
+
+And add last two-digit number from result print as environment variable *BME_I2C_ADDRESS* during run program in console below.
+If you can build the code directly on Raspberry Pi, compile and build it with cargo and run in console:
+
+` sudo RUST_LOG=info BME_I2C_ADDRESS=76 target/debug/hello-rpi-bme680 `
 
 To avoid a using ` sudo` we have to allow access for our user to ` /dev/i2c-1` with adding into ` i2c` group:
 
