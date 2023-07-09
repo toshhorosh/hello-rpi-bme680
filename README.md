@@ -24,11 +24,17 @@ To 'speak in the same language' with raspberry pi zero we add the build target:
 
 Download and install [GNU Toolchain](https://developer.arm.com/downloads/-/gnu-a) linker for rpi zero on a workstation - The __gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf.tar.xz__ works fine for me. Don't miss link it into __$PATH__ after extracting.
 
-After adding a reference to linker into [.cargo/config.toml](.cargo/config.toml) file, we can run cross build:
+After adding a reference to linker into [.cargo/config.toml](.cargo/config.toml) file, we can run cross build
+for debug purposes:
 
 ` cargo build --target arm-unknown-linux-gnueabihf`
 
-And now we have received the file ` target/arm-unknown-linux-gnueabihf/debug/hello-rpi-bme680` ready for deployment.
+And now we have created the file ` target/arm-unknown-linux-gnueabihf/debug/hello-rpi-bme680` ready for deployment.
+But this version is not optimized, for "production" ready set-up we need to use ` --release` flag in build command:
+
+` cargo build --target arm-unknown-linux-gnueabihf --release`
+
+and now our executable artifact locate here ` target/arm-unknown-linux-gnueabihf/release/hello-rpi-bme680` and has more efficient optimizations.
 
 ## Docker run
 [WIP]

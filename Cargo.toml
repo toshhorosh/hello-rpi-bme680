@@ -1,13 +1,17 @@
 [package]
 name = "hello-rpi-bme680"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 bme680 = "0.6.0"
-embedded-hal = "0.2.6"
+embedded-hal = "0.2.7"
 linux-embedded-hal = "0.3.0"
 log = "0.4.14"
 env_logger = "0.9.0"
+epd-waveshare = "0.5.0"
+embedded-graphics = "0.7.1"
+embedded-graphics-core = { version = "0.3.2", optional = true}
+bit_field = "0.10.1"
