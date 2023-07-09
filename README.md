@@ -1,6 +1,33 @@
 # hello-rpi-bme680
 Simple Rust application for home atmosphere monitoring system based on Rpi Zero, Bme680 sensor and WaveShare 2.13" V2 e-paper display.
 
+## Hardware set-up
+1. bme680 sensor requires a turning on I2C interface of Raspberry Pi (` sudo raspi-config -> Interfacing Options -> I2C -> Yes`).
+2. e-Paper display requires a turning on SPI interface (` sudo raspi-config -> Interfacing Options -> SPI -> Yes `). 
+3. Raspberry Pi Zero pins: ![from raspberrypi.com/documentation](rpi_pins.png)
+4. Raspberry Pi pins mapping I2C connection for sensor:
+   
+   | BME680 | BCM2835| Physical board pin |
+   |--- | --- | ---|
+   |Vin | 3.3V | 3.3V |
+   |Vdd | do not connect |do not connect |
+   |SDA | SDA |	3 |
+   |SCL | SCL |	5 |
+   |GND | GND |	GND |
+
+5. Raspberry Pi pins mapping SPI connection for display:
+
+   |e-Paper |BCM2835 |Physical board pin|
+   |--- | --- | --- |
+   |VCC | 3.3V |3.3V|
+   |GND | GND  |GND|
+   |DIN | MOSI |19 |
+   |CLK | SCLK |23 |
+   |CS  | CE0  |24 |
+   |DC  | GPIO 25 |22 |
+   |RST | GPIO 17 |11 |
+   |BUSY| GPIO 24 |18 |
+
 ## Local run on rpi 
 The main idea of getting data from sensor is taken from examples in [the repo of bme680 crate](https://github.com/marcelbuesing/bme680).
 
