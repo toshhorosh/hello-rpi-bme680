@@ -1,9 +1,17 @@
+use bme680::*;
+use core::result;
+use core::time::Duration;
+use embedded_hal::blocking::delay::DelayMs;
+use embedded_hal::blocking::i2c;
+use linux_embedded_hal as hal;
+use log::info;
+use std::env;
+use chrono;
 use embedded_graphics::{
     mono_font::MonoTextStyleBuilder,
     prelude::*,
     text::{Baseline, Text, TextStyleBuilder},
 };
-use embedded_hal::prelude::*;
 use epd_waveshare::{
     color::*,
     epd2in13_v2::{Display2in13, Epd2in13},
@@ -15,11 +23,49 @@ use linux_embedded_hal::{
     sysfs_gpio::Direction,
     Delay, Pin, Spidev,
 };
-use chrono;
 
-fn main() -> Result<(), std::io::Error> {
-    // Configure SPI
-    // Settings are taken from
+fn main(
+) -> result::Result<(), Error<<hal::I2cdev as i2c::Read>::Error, <hal::I2cdev as i2c::Write>::Error>>
+{
+    // sensor initialization
+    env_logger::init();
+    let _primary = String::from("76");
+    let _secondary = String::from("77");
+
+    let i2c_address = match env::var("BME_I2C_ADDRESS") {
+        x if x == Ok(_primary) => I2CAddress::Primary,
+        x if x == Ok(_secondary) => I2CAddress::Secondary,
+        Ok(_) => panic!("Unknown i2c address was received!"),
+        Err(e) => panic!("Set env value 'BME_I2C_ADDRESS' before run the program! Error: {}", e)
+    };
+
+    let i2c = hal::I2cdev::new("/dev/i2c-1").unwrap();
+    let mut delayer = Delay {};
+
+    let mut dev = Bme680::init(i2c, &mut delayer, i2c_address)?;
+    let mut delay = Delay {};
+
+    let settings = SettingsBuilder::new()
+        .with_humidity_oversampling(OversamplingSetting::OS2x)
+        .with_pressure_oversampling(OversamplingSetting::OS4x)
+        .with_temperature_oversampling(OversamplingSetting::OS8x)
+        .with_temperature_filter(IIRFilterSize::Size3)
+        .with_gas_measurement(Duration::from_millis(1500), 320, 25)
+        .with_temperature_offset(-2.2)
+        .with_run_gas(true)
+        .build();
+
+    let profile_dur = dev.get_profile_dur(&settings.0)?;
+    info!("Profile duration {:?}", profile_dur);
+    info!("Setting sensor settings");
+    dev.set_sensor_settings(&mut delayer, settings)?;
+    info!("Setting forced power modes");
+    dev.set_sensor_mode(&mut delayer, PowerMode::ForcedMode)?;
+
+    let sensor_settings = dev.get_sensor_settings(settings.1);
+    info!("Sensor settings: {:?}", sensor_settings);
+
+    // display initialization
     let mut spi = Spidev::open("/dev/spidev0.0").expect("spidev directory");
     let options = SpidevOptions::new()
         .bits_per_word(8)
@@ -52,8 +98,6 @@ fn main() -> Result<(), std::io::Error> {
     rst.set_direction(Direction::Out).expect("rst Direction");
     rst.set_value(1).expect("rst Value set to 1");
 
-    let mut delay = Delay {};
-
     let mut epd2in13 =
         Epd2in13::new(&mut spi, cs, busy, dc, rst, &mut delay).expect("e-ink initialize error");
 
@@ -68,23 +112,40 @@ fn main() -> Result<(), std::io::Error> {
 
     display.clear_buffer(Color::Black);
     display.set_rotation(DisplayRotation::Rotate270);
-    
-    let dt = chrono::offset::Local::now();
-    let test_text = format!("---------------\n\
-    Current dt: {:?} \n\
-    Temperature 25C\n\
-    Pressure 1000hPa\n\
-    Humidity 40%\n\
-    Gas Resistance 100Ohm\n\
-    ---------------", dt);
-    
-    draw_text(&mut display, &test_text, 5, 5);
-    epd2in13
-        .update_and_display_frame(&mut spi, display.buffer(), &mut delay)
-        .unwrap();
-    delay.delay_ms(5000u16);
 
-    epd2in13.sleep(&mut spi, &mut delay)
+    loop {
+        let dt = chrono::offset::Local::now();
+
+        dev.set_sensor_mode(&mut delayer, PowerMode::ForcedMode)?;
+        let (data, _state) = dev.get_sensor_data(&mut delayer)?;
+        info!("---------------");
+        info!("Temperature {}°C", data.temperature_celsius());
+        info!("Pressure {}hPa", data.pressure_hpa());
+        info!("Humidity {}%", data.humidity_percent());
+        info!("Gas Resistence {}Ω", data.gas_resistance_ohm());
+
+        let text_to_draw = format!(
+            "---------------\n\
+        Current dt: {:?} \n\
+        Temperature {:?}C\n\
+        Pressure {:?}hPa\n\
+        Humidity {:?}%\n\
+        Gas Resistance {:?}Ohm\n\
+        ---------------",
+            dt,
+            data.temperature_celsius(),
+            data.pressure_hpa(),
+            data.humidity_percent(),
+            data.gas_resistance_ohm()
+        );
+
+        draw_text(&mut display, &text_to_draw, 5, 5);
+        epd2in13
+            .update_and_display_frame(&mut spi, display.buffer(), &mut delay)
+            .unwrap();
+
+        delay.delay_ms(60000u32);
+    }
 }
 
 fn draw_text(display: &mut Display2in13, text: &str, x: i32, y: i32) {
